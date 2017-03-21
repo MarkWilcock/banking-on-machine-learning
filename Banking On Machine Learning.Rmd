@@ -1,0 +1,233 @@
+---
+title: "Banking On Machine Learning"
+author: "Mark Wilcock MA (Cantab), MBA (Imperial College, London), MVP (Microsoft)"
+date: "22nd March 2017"
+output:
+  ioslides_presentation:
+    fig_height: 4
+    fig_width: 6
+    smaller: yes
+    theme: spacelab
+  beamer_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## The beginning of the end?
+### The hackathon is towards the end of a firm's journey into ML
+
+Compare your hackathon experience with tales from recent meetup talks from successful data scientists
+
+- Alice Daish of British Museum, a data scientist without data! "communication & empathy"
+- John Kelly of North Yorks County Council, "talk to CEO like to mum"
+
+But big sophisticated banks are different, right?
+
+## Anatomy of a big bank - and its IT
+
+- Global: high cost (LON, NY) & low cost (Pune, Portugal & Poland)
+- Large: ~50K FTE  
+- Diversifed: retail bank (in historic home), investment bank (trading rates, equities & FX), private bank, and bad bank
+
+Data and analytics are not of fundamental importance in the same way as they are for Microsoft, Bloomberg,... - or a ML startup.
+
+Sophisticated IT - but perhaps not the most conducive to transformational ML?
+
+- historically viewed as a necessary cost of doing business, not a differentiator (factory model)
+- many (most) projects related  reporting to regulators
+- effort on reducing legacy applications
+- overriding focus on reliable operational capacity
+
+
+
+## For banks, ML is both opportunity and threat
+### Traditional strengths have become modern weaknesses
+
+Case study: 10X, led by Anthony Jenkins, ex CEO of Barclays (Bottom Line, BBC Radio 4, 16th March 2017)  
+"10 times better for customers, bank, and society"  
+"intelligent use of data"  
+
+* Threats
+    + disintermediation (startups cherry pick FX, peer-to-peer lending...)
+    + regulations e.g. PSD2 eroding natural advantages 
+  
+* Opportunities 
+    + front office revenue; pricing, client relationship, e.g. robo-advisors
+    + reduce costs in swollen back offices
+    + reduce credit & operational risk management
+
+Fintech = **ML** + blockchain + crowdsourcing + robotic process automation
+
+
+## The banks' ML strategy
+
+Externally - from competition to collaboration with start-ups
+
+- Incubate! 
+- Invest! 
+- Engage!
+- Assimilate!
+
+Internally - raise awareness, mobilise, crowdsource ideas and spin up initial projects
+
+1. Exhort and educate. "Adapt Or Die" at the Town Hall pep talk
+2. Mobilise. Appoint ML Czars, crowd-source ideas, instigate proof of value (PoV) projects, run hackathons...
+3. Pick proof of concepts (PoC). (5 minutes of fame)
+4. Run PoCs. Agree sponsors, budgets, assign PMs + teams
+5. _to do:_ Embed ML into bank's culture and operations
+
+
+## Advice from a ML Czar (& Top 30 AI Influencer)
+### Dr Andy Pardoe heads the ML stream at a Swiss Bank.
+
+- firms building a community of data scientists
+- informal network: look for projects and activity outside own area
+- cherry pick highly manual & repetitve processes
+- popular: reccommender systems for reconciling adjustments / breaks
+- do a proof of _value_ (PoV) before the proof of concept (PoC)
+- ML projects are business transformation projects
+- users need to gain confidence -> often a long UAT / production parallel
+
+
+## My 5 minute proof of value demo
+### You're the CIO. Is this a winner or loser?
+
+- Background: RFQs (request for quotes) market making of financial instruments
+- Process: counterparty requests quotes for bond (say), we provide bid-offer, counterparty states intent to buy or sell
+- Challenge: Predict counterparty intent based on details of client, product, transaction time
+- Opportunity: better pricing: any slight edge better than 50:50 will be profitable
+
+## The data:  product, counterparty, date, outcome
+![Historical RFQ data](quote_data.png)
+
+## The machine learns.
+
+It analyses the history, make predictions. This simple decision tree model explains its reasoning.  Other  models do not but may achieve better results.
+
+```{r, echo = FALSE, warning=FALSE, message=FALSE}
+library(readxl)
+library(dplyr)
+library(rpart)
+library(rpart.plot)
+library(RColorBrewer)
+library(ROCR)
+library(rattle)
+library(xtable)
+library(htmlTable)
+library(knitr)
+```
+
+```{r, echo = FALSE}
+df <- read.csv(file = "Quote Data.csv", header = TRUE)
+df <- mutate(df, tempval = runif(nrow(df)))
+df.train <- filter(df, tempval <= 0.7) %>% select(-tempval)
+df.test <- filter(df, tempval > 0.7) %>% select(-tempval)
+
+decision.tree.model <-
+  rpart(BuySell ~ TimeOfDay + IsEndOfWeek + IsEndOfMonth +
+          CounterpartyCountry + CounterpartySector + 
+          + BondCountry + BondTenor,
+        data = df.train,
+        method = "class")
+fancyRpartPlot(decision.tree.model, cex = 0.6)
+```
+
+##  RFQ in Azure ML
+![The machine learning process](rfq_azureml.png)
+
+
+## The results are in
+### Anything better than a diagonal line from bottom left to top right confers business benefit.
+```{r, echo = FALSE, results='hide', warning=FALSE, eval = FALSE}
+decision.tree.prediction <-
+    predict(decision.tree.model, df.test, type = "class")
+
+df.test <- mutate(df.test, BuySell.dtree = decision.tree.prediction)
+
+# count of true positives  - can go further to vcalculate  accuracy  etc manually
+count.tp <- nrow(filter(df.test, BuySell == 'Buy' & BuySell.dtree == 'Buy'))
+count.fp <- nrow(filter(df.test, BuySell == 'Sell' & BuySell.dtree == 'Buy'))
+count.fn <- nrow(filter(df.test, BuySell == 'Buy' & BuySell.dtree == 'Sell'))
+count.tn <- nrow(filter(df.test, BuySell == 'Sell' & BuySell.dtree == 'Sell'))
+count.all <- nrow(df.test)
+
+accuracy <- (count.tp + count.tn) / count.all
+
+logit.model <-
+  glm(BuySell ~ TimeOfDay + IsEndOfWeek + IsEndOfMonth + 
+        BondCountry + BondTenor + 
+        CounterpartyCountry +  CounterpartySector,
+      data= df.train,
+      family = binomial(link='logit'))
+
+logit.prediction <- predict (logit.model, df.test, type='response')
+
+df.test <- mutate(df.test, BuySell.logit = ifelse(logit.prediction <= .5, 'Buy', 'Sell'))
+
+count.tp.logit <- nrow(filter(df.test,  BuySell=='Buy' & BuySell.logit=='Buy'))
+count.fp.logit <- nrow(filter(df.test,  BuySell=='Sell' & BuySell.logit=='Buy'))
+count.fn.logit <- nrow(filter(df.test,  BuySell=='Buy' & BuySell.logit=='Sell'))
+count.tn.logit <- nrow(filter(df.test,  BuySell=='Sell' & BuySell.logit=='Sell'))
+
+accuracy.logit <- (count.tp.logit + count.tn.logit) / count.all
+
+pred <- prediction(logit.prediction, df.test$BuySell)
+
+perf <- performance(pred, measure="tpr", x.measure = "fpr")
+```
+
+```{r, echo = FALSE, eval=FALSE}
+options(repr.plot.width = 5, repr.plot.height = 3)
+plot(perf, col = rainbow(10), main = "Model performance")
+```
+
+![Evaluating our results](rfq_roc.png)
+ 
+ 
+## What's your verdict?
+
+- Winner. This will get funding for a proof of concept.
+- Loser. It is unlikely to generate profitable business because...? 
+
+
+## Conclusion
+
+### Successful introduction of ML into an organisation is about communication, culture, change, marketing... and finally hard data science.
+
+
+## Links at http://zomalex.co.uk/blog
+
+LBAG video recordings
+
+- transforming a museum to be data driven using R (Alice Daish, British Museum)
+- From nothing to something, a local government journey (John Kelly, North Yorks CC)
+- ML - what they don't teach you at Coursera (Harvinder Atwal, MoneySupermarket)
+- Dark Data (Prof. Mark Whitehorn), a masterclass in communication
+
+
+### Meetups
+
+- LBAG - my meetup (coming up: "Data Science Algorithms in Plain English", May 17th @ 6pm @ Microsoft Paddington)
+- London Power BI User Group - mix of new speakers and old hands
+- data+viz, eclectic mix, always fascinating 
+- R-Ladies, a growing international family / community
+
+## References
+
+ - Bottom Line: Bottom Line: Evan Davies interviews fintech leaders including Anthony Jenkins of 10x
+ - The Economist: What Satya Nadella did at Microsoft
+ - Dr Andy Pardoe's homeAI.Info (comprehensive ML and AI resources)
+
+## Thank you 
+Email: mark.wilcock@zomalex.co.uk  
+Twitter: @LonBizAnalytics
+
+ 
+<!--
+output: pdf_document
+output: 
+  ioslides_presentation:
+    theme: spacelab
+-->
