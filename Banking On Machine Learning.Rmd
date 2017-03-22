@@ -33,21 +33,23 @@ But big sophisticated banks are different, right?
 
 Data and analytics are not of fundamental importance in the same way as they are for Microsoft, Bloomberg,... - or a ML startup.
 
-Sophisticated IT - but perhaps not the most conducive to transformational ML?
+IT priorities
 
-- historically viewed as a necessary cost of doing business, not a differentiator (factory model)
-- many (most) projects related  reporting to regulators
-- effort on reducing legacy applications
-- overriding focus on reliable operational capacity
+- **production stability**
+- relentless cost pressures
+- reporting to regulators
+- reduce legacy applications
 
+IT historically viewed as a necessary cost of doing business, not a differentiator (factory model)
 
+A conducive environment for transformational ML?
 
 ## For banks, ML is both opportunity and threat
 ### Traditional strengths have become modern weaknesses
 
 Case study: 10X, led by Anthony Jenkins, ex CEO of Barclays (Bottom Line, BBC Radio 4, 16th March 2017)  
-"10 times better for customers, bank, and society"  
-"intelligent use of data"  
+"10 times better for customers, bank, and ... society"  
+
 
 * Threats
     + disintermediation (startups cherry pick FX, peer-to-peer lending...)

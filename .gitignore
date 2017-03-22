@@ -1,5 +1,6 @@
 *.html
 *.pdf
+tex2pdf.*
 .RData
 .Rproj.user
 .Rhistory
